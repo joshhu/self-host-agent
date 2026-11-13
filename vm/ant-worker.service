@@ -1,0 +1,15 @@
+[Unit]
+Description=Claude Managed Agents self-hosted sandbox worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=worker
+WorkingDirectory=/workspace
+EnvironmentFile=/etc/ant-worker/env
+ExecStart=/usr/local/bin/ant beta:worker poll --workdir /workspace
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

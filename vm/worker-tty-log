@@ -1,0 +1,10 @@
+#!/bin/bash
+# Show the worker's log on the VM's own screen (tty1), one short line per event.
+exec > /dev/tty1 2>&1
+setfont -C /dev/tty1 /usr/share/consolefonts/Lat15-TerminusBold32x16.psf.gz 2>/dev/null
+printf '\033c\n  %s  (%s)\n  worker log:  journalctl -fu ant-worker\n  ------------------------------------------------\n\n' "$(hostname)" "$(hostname -I | awk '{print $1}')"
+journalctl -fu ant-worker -n 0 -o cat | awk '{
+  t=substr($1,17,8); h=(substr(t,1,2)+8)%24; t=sprintf("%02d%s",h,substr(t,3));
+  m=$0; sub(/.*msg="/,"",m); sub(/".*/,"",m);
+  tool=""; if (match($0,/ tool=[a-z_]+/)) tool=substr($0,RSTART+6,RLENGTH-6);
+  printf "  %s   %-18s %s\n", t, m, tool; fflush() }'

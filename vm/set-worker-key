@@ -1,0 +1,10 @@
+#!/bin/bash
+# Prompts for the environment key without echoing it, stores it, restarts the worker.
+[ "$(id -u)" = 0 ] || exec sudo "$0" "$@"
+read -r -s -p "Paste environment key (sk-ant-oat01-...): " KEY; echo
+case "$KEY" in sk-ant-oat01-*) ;; *) echo "That does not look like an environment key."; exit 1;; esac
+sed -i "s|^ANTHROPIC_ENVIRONMENT_KEY=.*|ANTHROPIC_ENVIRONMENT_KEY=$KEY|" /etc/ant-worker/env
+systemctl enable --now ant-worker >/dev/null 2>&1
+systemctl restart ant-worker
+sleep 3
+systemctl is-active ant-worker && echo "Worker is running." || journalctl -u ant-worker -n 15 --no-pager

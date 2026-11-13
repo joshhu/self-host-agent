@@ -1,0 +1,9 @@
+[project]
+name = "self-host-agent"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=2.8.0",
+    "fastapi>=0.162.6",
+    "uvicorn>=0.54.0",
+]

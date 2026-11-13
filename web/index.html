@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>進貨發票對帳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #FAFCFA;
+  --sheet: #FFFFFF;
+  --ink: #18221F;
+  --muted: #5F6D68;
+  --ledger: #1F5D4C;      /* the green of ruled account books */
+  --ledger-wash: #E8F1EC;
+  --rule: #C9DAD2;
+  --seal: #C5301C;        /* seal-paste vermilion: approvals stamped, problems marked */
+  --seal-wash: #FBEAE6;
+  --sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --serif: "Noto Serif TC", "Songti TC", serif;
+}
+* { box-sizing: border-box; }
+html { font-size: 16px; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.6; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ledger); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+.page { max-width: 1240px; margin: 0 auto; padding: 28px 24px 64px; }
+
+.masthead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding-bottom: 16px; border-bottom: 3px double var(--ledger); }
+.masthead h1 { font-family: var(--serif); font-weight: 900; font-size: 2rem; letter-spacing: .08em; margin: 0; line-height: 1.2; }
+.masthead p { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
+
+.btn { border: 1px solid var(--ledger); background: var(--sheet); color: var(--ledger); padding: 8px 18px; border-radius: 4px; font-weight: 500; }
+.btn:hover:not(:disabled) { background: var(--ledger-wash); }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn.primary { background: var(--ledger); color: #fff; }
+.btn.primary:hover:not(:disabled) { background: #174838; }
+.btn.warn { border-color: var(--seal); color: var(--seal); }
+.btn.warn:hover:not(:disabled) { background: var(--seal-wash); }
+.btn.quiet { border-color: transparent; padding: 4px 8px; font-weight: 400; text-decoration: underline; }
+
+.summary { margin: 20px 0 0; font-size: 1.05rem; }
+.summary strong { font-weight: 700; }
+.summary .held { color: var(--seal); }
+
+.notice { margin-top: 16px; padding: 12px 16px; border-left: 4px solid var(--seal); background: var(--seal-wash); }
+
+.activity { margin-top: 20px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; padding: 14px 18px; }
+.activity summary { font-weight: 700; cursor: pointer; }
+.activity[open] summary { margin-bottom: 8px; }
+.activity ol { list-style: none; margin: 0; padding: 0; max-height: 11.5rem; overflow-y: auto; font-size: .9rem; }
+.activity li { display: grid; grid-template-columns: 3.5rem 1fr; padding: 2px 0; color: var(--muted); }
+.activity li:last-child { color: var(--ink); font-weight: 500; }
+.activity li span:first-child { font-variant-numeric: tabular-nums; }
+
+.empty { margin-top: 48px; max-width: 34rem; }
+.empty h2 { font-family: var(--serif); font-size: 1.4rem; margin: 0 0 8px; }
+.empty p { margin: 0; color: var(--muted); }
+
+.desk { display: grid; grid-template-columns: minmax(300px, 400px) 1fr; gap: 28px; margin-top: 28px; align-items: start; }
+
+.group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0 0 6px; }
+.group-head h2 { font-size: 1rem; font-weight: 700; margin: 0; }
+.group + .group { margin-top: 28px; }
+.rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ledger); }
+.row { display: grid; grid-template-columns: 2.6rem 1fr auto; column-gap: 10px; width: 100%; text-align: left;
+  background: none; border: 0; border-bottom: 1px solid var(--rule); padding: 9px 8px; position: relative; }
+.row:hover { background: var(--ledger-wash); }
+.row[aria-current="true"] { background: var(--ledger-wash); box-shadow: inset 4px 0 0 var(--ledger); }
+.row .no { color: var(--muted); font-variant-numeric: tabular-nums; }
+.row .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .amt { font-variant-numeric: tabular-nums; }
+.row .why { grid-column: 2 / 4; font-size: .85rem; color: var(--seal); }
+.row .done { grid-column: 2 / 4; font-size: .85rem; color: var(--muted); }
+.row.decided .who, .row.decided .amt { color: var(--muted); }
+
+.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; padding: 26px 30px 30px; position: sticky; top: 20px; min-height: 22rem; }
+.sheet h2 { font-family: var(--serif); font-size: 1.5rem; font-weight: 600; margin: 0; line-height: 1.3; padding-right: 7rem; }
+.sheet .meta { color: var(--muted); margin: 4px 0 0; font-size: .92rem; padding-right: 7rem; }
+.verdict { margin: 20px 0 0; padding: 12px 16px; border-left: 4px solid var(--ledger); background: var(--ledger-wash); }
+.verdict.held { border-color: var(--seal); background: var(--seal-wash); }
+.verdict b { display: block; }
+
+.match { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: .95rem; }
+.match caption { text-align: left; font-weight: 700; padding-bottom: 6px; }
+.match th, .match td { padding: 7px 10px; border-bottom: 1px solid var(--rule); text-align: right; font-variant-numeric: tabular-nums; }
+.match th:first-child, .match td:first-child { text-align: left; }
+.match thead th { color: var(--ledger); font-weight: 700; border-bottom: 1px solid var(--ledger); border-top: 2px solid var(--ledger); }
+.match thead tr:first-child th { border-bottom: 0; padding-bottom: 0; }
+.match thead th[colspan] { text-align: center; }
+.match thead tr:last-child th { border-top: 0; font-weight: 400; font-size: .85rem; }
+.match .src { border-left: 1px solid var(--rule); }
+.match td.off { color: var(--seal); background: var(--seal-wash); font-weight: 700; }
+.match td small { display: block; color: var(--muted); font-size: .8rem; }
+.totals { margin: 12px 0 0; text-align: right; font-variant-numeric: tabular-nums; }
+.totals strong { font-size: 1.15rem; }
+
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; align-items: center; }
+
+/* The reviewer's decision lands as a stamp, the way a paper voucher is signed off. */
+.stamp { position: absolute; top: 20px; right: 26px; font-family: var(--serif); font-weight: 900; letter-spacing: .12em;
+  transform: rotate(-9deg); pointer-events: none; mix-blend-mode: multiply; }
+.stamp.paid { width: 5.6rem; height: 5.6rem; border-radius: 50%; color: var(--seal); border: 3px solid var(--seal);
+  outline: 1px solid var(--seal); outline-offset: -8px; display: grid; place-items: center; font-size: 1.35rem; padding-left: .12em; }
+.stamp.returned { color: #2C3F63; border: 3px solid #2C3F63; padding: 6px 14px 6px 18px; font-size: 1.35rem; border-radius: 3px; top: 30px; }
+.stamp.fresh { animation: press .22s cubic-bezier(.2, .9, .3, 1.2); }
+@keyframes press { from { transform: rotate(-9deg) scale(1.9); opacity: 0; } to { transform: rotate(-9deg) scale(1); opacity: 1; } }
+
+@media (max-width: 860px) {
+  .page { padding: 20px 16px 48px; }
+  .desk { grid-template-columns: 1fr; }
+  .sheet { padding: 20px 16px 24px; position: relative; top: 0; }
+  .match { font-size: .85rem; }
+  .match th, .match td { padding: 6px 5px; }
+}
+@media (prefers-reduced-motion: reduce) { .stamp.fresh { animation: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div>
+      <h1>進貨發票對帳</h1>
+      <p>喬許科技 應付帳款。Agent 比對發票、採購單與驗收紀錄，有疑問的留給你決定。</p>
+    </div>
+    <button class="btn primary" id="run">開始對帳</button>
+  </header>
+  <div id="notice"></div>
+  <p class="summary" id="summary" hidden></p>
+  <details class="activity" id="activity" hidden>
+    <summary id="activity-title">Agent 正在對帳</summary>
+    <ol id="log" aria-live="polite"></ol>
+  </details>
+  <main id="main"></main>
+</div>
+
+<script>
+const REASONS = {
+  PO_NOT_FOUND: "查無採購單", PO_NOT_OPEN: "採購單已關閉或取消", SUPPLIER_MISMATCH: "統一編號與供應商不符",
+  PO_LINE_NOT_FOUND: "料號不在採購單上", PRICE_MISMATCH: "單價不符", NOT_RECEIVED: "尚未驗收",
+  QTY_EXCEEDS_RECEIPT: "請款數量超過驗收", TAX_ERROR: "營業稅計算錯誤", TOTAL_ERROR: "金額加總錯誤",
+  DUPLICATE_INVOICE: "重複請款", NEEDS_REVIEW: "需要人工判斷",
+};
+const DECIDED = { paid: "已核准付款", returned: "已退回供應商" };
+const STAMP = { paid: "核准", returned: "退回" };
+
+let state = { running: false, log: [], invoices: [], decisions: {}, error: null };
+let selected = null;
+let freshStamp = null;
+let wasRunning = null;
+
+const $ = (id) => document.getElementById(id);
+const nt = (n) => "NT$" + Number(n).toLocaleString("en-US");
+const qty = (n) => n == null ? "查無" : Number(n).toLocaleString("en-US");
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const reasonText = (inv) => inv.reasons.map((r) => REASONS[r] || r).join("、");
+const sum = (list) => list.reduce((t, i) => t + i.total, 0);
+
+async function api(path, body) {
+  const res = await fetch(path, body === undefined ? {} : {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || `伺服器回應 ${res.status}`);
+  return res.json();
+}
+
+async function refresh() {
+  try {
+    state = await api("/api/state");
+    $("notice").innerHTML = state.error
+      ? `<p class="notice">這次對帳沒有完成：${esc(state.error)}。下方是上一次的結果，可以再按一次「開始對帳」。</p>` : "";
+  } catch (e) {
+    $("notice").innerHTML = `<p class="notice">連不上後端程式（${esc(e.message)}）。請確認 uvicorn 仍在執行。</p>`;
+  }
+  render();
+}
+
+function render() {
+  const { invoices, decisions } = state;
+  $("run").disabled = state.running;
+  $("run").textContent = state.running ? "對帳中" : invoices.length ? "重新對帳" : "開始對帳";
+
+  $("activity").hidden = !state.log.length;
+  if (state.running !== wasRunning) { $("activity").open = state.running; wasRunning = state.running; }
+  $("activity-title").textContent = state.running ? "Agent 正在對帳" : `Agent 已完成，花了 ${state.elapsed} 秒`;
+  $("log").innerHTML = state.log.map((l) => `<li><span>${l.t} 秒</span><span>${esc(l.text)}</span></li>`).join("");
+  if (state.running) $("log").scrollTop = $("log").scrollHeight;
+
+  if (!invoices.length) {
+    $("summary").hidden = true;
+    $("main").innerHTML = state.running ? "" : `<div class="empty"><h2>還沒有對帳結果</h2>
+      <p>按「開始對帳」，agent 會讀取收件匣裡的發票，逐張比對採購單與驗收紀錄。大約需要一分鐘。</p></div>`;
+    return;
+  }
+
+  const held = invoices.filter((i) => i.decision !== "approve");
+  const clean = invoices.filter((i) => i.decision === "approve");
+  const open = invoices.filter((i) => !decisions[i.file]).length;
+  $("summary").hidden = false;
+  $("summary").innerHTML = `本批 ${invoices.length} 張，共 <span class="num">${nt(sum(invoices))}</span>。`
+    + `比對相符 <strong>${clean.length} 張</strong> <span class="num">${nt(sum(clean))}</span>；`
+    + `<span class="held">有疑問 <strong>${held.length} 張</strong> <span class="num">${nt(sum(held))}</span></span>。`
+    + (open ? `還有 ${open} 張等你決定。` : "全部處理完了。");
+
+  if (!selected || !invoices.some((i) => i.file === selected))
+    selected = (held.find((i) => !decisions[i.file]) || invoices[0]).file;
+
+  const row = (inv) => {
+    const d = decisions[inv.file];
+    const sub = d ? `<span class="done">${DECIDED[d]}</span>`
+      : inv.decision !== "approve" ? `<span class="why">${esc(reasonText(inv))}</span>` : "";
+    return `<li><button class="row ${d ? "decided" : ""}" data-file="${esc(inv.file)}" aria-current="${inv.file === selected}">
+      <span class="no">${esc(inv.file.split(".")[0])}</span><span class="who">${esc(inv.supplier)}</span>
+      <span class="amt">${nt(inv.total)}</span>${sub}</button></li>`;
+  };
+  const cleanOpen = clean.filter((i) => !decisions[i.file]);
+
+  $("main").innerHTML = `<div class="desk">
+    <nav aria-label="發票清單">
+      <section class="group"><div class="group-head"><h2>有疑問，需要你決定（${held.length}）</h2></div>
+        <ul class="rows">${held.map(row).join("")}</ul></section>
+      <section class="group"><div class="group-head"><h2>比對相符（${clean.length}）</h2>
+        ${cleanOpen.length ? `<button class="btn" id="pay-all">核准這 ${cleanOpen.length} 張付款</button>` : ""}</div>
+        <ul class="rows">${clean.map(row).join("")}</ul></section>
+    </nav>
+    <article class="sheet" id="sheet">${sheet(invoices.find((i) => i.file === selected))}</article>
+  </div>`;
+  freshStamp = null;
+}
+
+function sheet(inv) {
+  const d = state.decisions[inv.file];
+  const held = inv.decision !== "approve";
+  const lines = inv.lines || [];
+  const body = lines.map((l) => {
+    const priceOff = l.po_unit_price == null || l.invoiced_unit_price !== l.po_unit_price;
+    const qtyOff = l.received_qty == null || l.invoiced_qty > l.received_qty;
+    return `<tr><td>${esc(l.sku)}<small>${esc(l.description)}</small></td>
+      <td class="src ${qtyOff ? "off" : ""}">${qty(l.invoiced_qty)}</td><td class="${priceOff ? "off" : ""}">${l.invoiced_unit_price}</td>
+      <td class="src">${qty(l.po_qty)}</td><td class="${priceOff ? "off" : ""}">${l.po_unit_price ?? "查無"}</td>
+      <td class="src ${qtyOff ? "off" : ""}">${qty(l.received_qty)}</td></tr>`;
+  }).join("");
+  const stamp = d ? `<div class="stamp ${d} ${freshStamp === inv.file ? "fresh" : ""}" role="img" aria-label="${DECIDED[d]}">${STAMP[d]}</div>` : "";
+  const actions = d
+    ? `<span>${DECIDED[d]}。</span><button class="btn quiet" data-act="">撤銷這個決定</button>`
+    : `<button class="btn ${held ? "" : "primary"}" data-act="paid">${held ? "仍然核准付款" : "核准付款"}</button>
+       <button class="btn warn" data-act="returned">退回供應商</button>`;
+  return `${stamp}
+    <h2>${esc(inv.supplier)}</h2>
+    <p class="meta">收件編號 ${esc(inv.file.split(".")[0])}，發票 ${esc(inv.invoice_no)}，採購單 ${esc(inv.po_no)}</p>
+    <div class="verdict ${held ? "held" : ""}">
+      <b>${held ? "Agent 建議暫緩：" + esc(reasonText(inv)) : "Agent 判斷：三方比對相符，可以付款"}</b>${esc(inv.note)}
+    </div>
+    ${lines.length ? `<table class="match"><caption>三方比對</caption>
+      <thead><tr><th rowspan="2">料號</th><th colspan="2" class="src">發票</th><th colspan="2" class="src">採購單</th><th class="src">驗收</th></tr>
+      <tr><th class="src">數量</th><th>單價</th><th class="src">數量</th><th>單價</th><th class="src">已收數量</th></tr></thead>
+      <tbody>${body}</tbody></table>` : ""}
+    <p class="totals">發票總計（含稅）<strong>${nt(inv.total)}</strong></p>
+    <div class="actions">${actions}</div>`;
+}
+
+async function decide(files, decision) {
+  try {
+    state.decisions = await api("/api/decision", { files, decision: decision || null });
+    freshStamp = decision && files.length === 1 ? files[0] : null;
+    render();
+  } catch (e) {
+    $("notice").innerHTML = `<p class="notice">決定沒有存成功：${esc(e.message)}</p>`;
+  }
+}
+
+$("main").addEventListener("click", (e) => {
+  const row = e.target.closest(".row");
+  if (row) { selected = row.dataset.file; render(); return; }
+  const act = e.target.closest("[data-act]");
+  if (act) { decide([selected], act.dataset.act); return; }
+  if (e.target.id === "pay-all") {
+    const files = state.invoices.filter((i) => i.decision === "approve" && !state.decisions[i.file]).map((i) => i.file);
+    decide(files, "paid");
+  }
+});
+
+$("run").addEventListener("click", async () => {
+  try { await api("/api/run", {}); } catch (e) { $("notice").innerHTML = `<p class="notice">${esc(e.message)}</p>`; }
+  refresh();
+});
+
+setInterval(() => { if (state.running) refresh(); }, 1000);
+refresh();
+</script>
+</body>
+</html>
